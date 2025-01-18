@@ -1,119 +1,109 @@
 import tkinter as tk
 import random
 
-# Параметры окна
-WIDTH = 800
-HEIGHT = 600
-FLY_SIZE = 50
-GAME_TIME = 30  # Время игры в секундах
-MOVE_TIME = 2000  # Время движения мухи в одной позиции (в миллисекундах)
+class FlyGame:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Fly Game")
+        self.root.geometry("600x450")
+        self.root.resizable(False, False)
 
-# Глобальные переменные
-score = 0
-remaining_time = GAME_TIME
-fly_x = random.randint(0, WIDTH - FLY_SIZE)
-fly_y = random.randint(0, HEIGHT - FLY_SIZE)
+        self.bg = tk.PhotoImage(file="Back.png")  # Фон
+        self.fly_image = tk.PhotoImage(file="Muha.png")  # Муха
+        self.swatter_image = tk.PhotoImage(file="Boyka.png")  # Мухобойка
 
-# Направления для случайного движения
-DIRECTIONS = ['up', 'down', 'left', 'right']
+        self.canvas = tk.Canvas(self.root, width=600, height=400)
+        self.canvas.pack()
 
+        self.canvas.create_image(0, 0, anchor="nw", image=self.bg)
 
-# Функция для обновления позиции мухи
-def move_fly():
-    global fly_x, fly_y, current_direction, move_duration
-    if move_duration > 0:
-        # Двигаем муху в выбранном направлении
-        if current_direction == 'up':
-            fly_y -= 5
-        elif current_direction == 'down':
-            fly_y += 5
-        elif current_direction == 'left':
-            fly_x -= 5
-        elif current_direction == 'right':
-            fly_x += 5
+        self.score = 0
+        self.fly_count = 0
+        self.time_left = 20
+        self.running = True
+        self.fly = None
+        self.fly_direction = [0, 0]
 
-        # Ограничиваем движение в пределах экрана
-        fly_x = max(0, min(fly_x, WIDTH - FLY_SIZE))
-        fly_y = max(0, min(fly_y, HEIGHT - FLY_SIZE))
+        self.score_label = tk.Label(self.root, text=f"Score: {self.score}", font=("Arial", 14))
+        self.score_label.pack(anchor="nw")
 
-        canvas.coords(fly, fly_x, fly_y)
+        self.timer_label = tk.Label(self.root, text=f"Time left: {self.time_left} sec", font=("Arial", 14))
+        self.timer_label.pack(anchor="ne")
 
-        # Уменьшаем оставшееся время движения в текущем направлении
-        move_duration -= 100
-        root.after(100, move_fly)
-    else:
-        # Телепортация в новое место
-        teleport_fly()
+        self.root.bind("<Motion>", self.move_swatter)
+        self.root.bind("<Button-1>", self.hit_fly)
 
+        self.swatter = self.canvas.create_image(0, 0, image=self.swatter_image, anchor="center")
 
-# Функция для телепортации мухи в новое место и направления
-def teleport_fly():
-    global fly_x, fly_y, current_direction, move_duration
-    # Выбираем случайное направление
-    current_direction = random.choice(DIRECTIONS)
-    # Телепортируем муху в случайную позицию
-    fly_x = random.randint(0, WIDTH - FLY_SIZE)
-    fly_y = random.randint(0, HEIGHT - FLY_SIZE)
-    # Устанавливаем время на движение в новом направлении
-    move_duration = MOVE_TIME
-    canvas.coords(fly, fly_x, fly_y)
-    move_fly()
+        self.spawn_fly()
+        self.update_timer()
+
+    def move_swatter(self, event):
+        self.canvas.coords(self.swatter, event.x, event.y)
+
+    def spawn_fly(self):
+        if not self.running:
+            return
+
+        if self.fly:
+            self.canvas.delete(self.fly)
+
+        x, y = random.randint(50, 550), random.randint(50, 350)
+        self.fly = self.canvas.create_image(x, y, image=self.fly_image)
+        self.fly_direction = [random.choice([-1, 1]) * random.randint(5, 10),
+                              random.choice([-1, 1]) * random.randint(5, 10)]
 
 
-# Обработчик клика по мухе
-def on_fly_click(event):
-    global score
-    if fly_x <= event.x <= fly_x + FLY_SIZE and fly_y <= event.y <= fly_y + FLY_SIZE:
-        score += 1
-        score_label.config(text=f"Счет: {score}")
-        teleport_fly()
+        self.move_fly()
+        self.root.after(1000, self.spawn_fly)
 
+    def move_fly(self):
+        if not self.running or not self.fly:
+            return
 
-# Функция для обновления таймера
-def update_timer():
-    global remaining_time
-    if remaining_time > 0:
-        remaining_time -= 1
-        timer_label.config(text=f"Время: {remaining_time}")
-        root.after(1000, update_timer)
-    else:
-        end_game()
+        x1, y1, x2, y2 = self.canvas.bbox(self.fly)
+        dx, dy = self.fly_direction
 
+        if x1 + dx < 0 or x2 + dx > 600:
+            self.fly_direction[0] *= -1
+        if y1 + dy < 0 or y2 + dy > 400:
+            self.fly_direction[1] *= -1
 
-# Завершение игры
-def end_game():
-    canvas.unbind("<Button-1>")
-    canvas.delete(fly)
-    canvas.create_text(WIDTH // 2, HEIGHT // 2, text=f"Игра окончена! Ваш счет: {score}", font=("Arial", 24),
-                       fill="red")
+        self.canvas.move(self.fly, self.fly_direction[0], self.fly_direction[1])
 
+        self.root.after(50, self.move_fly)
 
-# Создание окна
-root = tk.Tk()
-root.title("Мухобойка")
+    def hit_fly(self, event):
+        if self.fly:
+            fly_coords = self.canvas.bbox(self.fly)
+            swatter_coords = self.canvas.bbox(self.swatter)
 
-# Создание холста
-canvas = tk.Canvas(root, width=WIDTH, height=HEIGHT)
-canvas.pack()
+            if (fly_coords[0] < swatter_coords[2] and
+                fly_coords[2] > swatter_coords[0] and
+                fly_coords[1] < swatter_coords[3] and
+                fly_coords[3] > swatter_coords[1]):
 
-# Добавление фона (используем формат .gif)
-background_photo = tk.PhotoImage(file="Back.png")  # Замените на путь к вашему фону
-canvas.create_image(0, 0, anchor=tk.NW, image=background_photo)
+                self.canvas.delete(self.fly)
+                self.fly = None
+                self.score += 1
+                self.score_label.config(text=f"Score: {self.score}")
 
-# Создание мухи (используем формат .gif)
-fly_photo = tk.PhotoImage(file="Muha.png")  # Замените на путь к изображению мухи
-fly = canvas.create_image(fly_x, fly_y, image=fly_photo)
+    def update_timer(self):
+        if self.time_left > 0:
+            self.time_left -= 1
+            self.timer_label.config(text=f"Time left: {self.time_left} sec")
+            self.root.after(1000, self.update_timer)
+        else:
+            self.end_game()
 
-# Счетчик и таймер
-score_label = tk.Label(root, text=f"Счет: {score}", font=("Arial", 16))
-score_label.pack(side=tk.LEFT, padx=20)
+    def end_game(self):
+        self.running = False
+        self.canvas.delete("all")
+        self.canvas.create_image(0, 0, anchor="nw", image=self.bg)
+        self.canvas.create_text(300, 200, text=f"Game Over!\nYour Score: {self.score}",
+                                 font=("Arial", 24), fill="black")
 
-timer_label = tk.Label(root, text=f"Время: {remaining_time}", font=("Arial", 16))
-timer_label.pack(side=tk.RIGHT, padx=20)
-
-# Запуск игры
-move_duration = MOVE_TIME  # Время, которое муха двигается в одном направлении
-current_direction = random.choice(DIRECTIONS)  # Случайное начальное направление
-move_fly()
-update_timer()
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = FlyGame(root)
+    root.mainloop()
