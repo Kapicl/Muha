@@ -3,19 +3,6 @@ from random import *
 from winsound import *
 from time import *
 
-def play_sound_ok():
-    files = []
-    for i in range(1, 7):
-        files.append(f"hit{i}.wav")
-    file = choice(files)
-    PlaySound(file, SND_ASYNC | SND_FILENAME)
-
-def play_sound_fail():
-    files = []
-    for i in range(1, 8):
-        files.append(f"fail{i}.wav")
-    file = choice(files)
-    PlaySound(file, SND_ASYNC | SND_FILENAME)
 
 def collision_detection(x, y):
     position = canvas.coords(npc_id)
@@ -29,7 +16,6 @@ def hit():
     global score
     score += 1
     update_points()
-    play_sound_ok()
     spawn()
 
 def missclick():
@@ -39,7 +25,6 @@ def missclick():
         game_over()
     else:
         update_points()
-        play_sound_fail()
 
 def spawn():
     for i in range(100):
@@ -65,7 +50,6 @@ def game_over():
     global gameover
     canvas.itemconfigure(text_id, text='Потрачено')
     gameover = True
-    PlaySound('gameover.wav', SND_ASYNC | SND_FILENAME)
 
 def mouse_click(e):
     if gameover:
@@ -78,11 +62,11 @@ def mouse_click(e):
 def mouse_motion(event):
     global mouse_x, mouse_y
     mouse_x, mouse_y = event.x, event.y
-    canvas.coords(myxaboy_id, mouse_x-30, mouse_y-20)  # Перемещаем картинку вслед за курсором
+    canvas.coords(myxaboy_id, mouse_x-30, mouse_y-20)
 
 def show_start_screen():
     global start_message
-    canvas.config(bg="blue")
+    canvas.config(bg="White")
     start_message = canvas.create_text(game_width / 2, game_height / 2, text="Поймай как можно больше мух", fill="black", font="Arial 30")
     window.after(3000, hide_start_screen)
 
@@ -95,7 +79,7 @@ def start_game():
     game_time_left = 20000
     gameover = False
     canvas.config(bg="white")
-    canvas.itemconfig(npc_id, state='normal')  # Показываем изображение при старте игры
+    canvas.itemconfig(npc_id, state='normal')
     update_timer()
     game_update()
 
@@ -111,12 +95,11 @@ def update_timer():
 def end_game():
     global gameover
     gameover = True
-    canvas.config(bg="purple")
+    canvas.config(bg="black")
     canvas.delete("all")
     final_score_label = Label(canvas, text=f"Конец игры!\nВаш счёт: {score}", font="Arial 40", fg="white", bg="purple")
     final_score_label.place(relx=0.5, rely=0.5, anchor=CENTER)
 
-# Настройки игры
 game_width = 720
 game_height = 720
 npc_width = 120
@@ -126,20 +109,16 @@ mouse_x = mouse_y = 0
 gameover = False
 game_time_left = 0
 
-# Создание окна
 window = Tk()
-window.title('Проучи тролля')
 window.resizable(width=False, height=False)
 
-# Загрузка изображений
-bottom_image = PhotoImage(file='img/myxa_niz.png')
-top_image = PhotoImage(file='img/myxa_verx.png')
-myxaboy_image = PhotoImage(file='img/myxaboy.png')
+bottom_image = PhotoImage(file='img/Muha.png')
+top_image = PhotoImage(file='img/Muha.png')
+myxaboy_image = PhotoImage(file='img/Boyka.png')
 
-# Создание холста
 canvas = Canvas(window, width=game_width, height=game_height, bg="black")
 npc_id = canvas.create_image(0, 0, anchor='nw', image=bottom_image)
-canvas.itemconfig(npc_id, state='hidden')  # Скрываем изображение перед началом игры
+canvas.itemconfig(npc_id, state='hidden')
 timer_label = Label(canvas, text="", font="Arial 16", fg="black", bg="white")
 timer_label.place(x=10, y=10)
 text_id = canvas.create_text(
@@ -149,17 +128,13 @@ text_id = canvas.create_text(
     text=f'Очки: {score}',
     anchor=NE)
 
-# Картинка, следующая за курсором
 myxaboy_id = canvas.create_image(0, 0, image=myxaboy_image, anchor='nw')
 
-# Привязка событий
 canvas.bind('<Button>', mouse_click)
 canvas.bind('<Motion>', mouse_motion)
 canvas.pack()
 
-# Скрытие курсора
 window.config(cursor="none")
 
-# Начало игры
 show_start_screen()
 window.mainloop()
